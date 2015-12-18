@@ -458,7 +458,7 @@ int main()
 	//*/ qiao: set log ang param file here
 	//std::ifstream file("csail-oldcarmen.log");
 	//std::ifstream file("intel.clf");
-	std::ifstream file("data\\toby_20151217_071843.clf");
+	std::ifstream file("data\\toby_20151218_113711.clf");
 	//loadParam("gmapping.cfg");
 	loadParam("config\\toby.cfg");
 	bool isCSV = false;
