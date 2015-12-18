@@ -1,0 +1,78 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\openslam_gmapping\scanmatcher\eig3.cpp">
+      <Filter>openslam_gmapping</Filter>
+    </ClCompile>
+    <ClCompile Include="src\openslam_gmapping\gridfastslam\gridslamprocessor.cpp">
+      <Filter>openslam_gmapping</Filter>
+    </ClCompile>
+    <ClCompile Include="src\openslam_gmapping\gridfastslam\gridslamprocessor_tree.cpp">
+      <Filter>openslam_gmapping</Filter>
+    </ClCompile>
+    <ClCompile Include="src\openslam_gmapping\gridfastslam\motionmodel.cpp">
+      <Filter>openslam_gmapping</Filter>
+    </ClCompile>
+    <ClCompile Include="src\openslam_gmapping\sensor\sensor_odometry\odometryreading.cpp">
+      <Filter>openslam_gmapping</Filter>
+    </ClCompile>
+    <ClCompile Include="src\openslam_gmapping\sensor\sensor_odometry\odometrysensor.cpp">
+      <Filter>openslam_gmapping</Filter>
+    </ClCompile>
+    <ClCompile Include="src\openslam_gmapping\sensor\sensor_range\rangereading.cpp">
+      <Filter>openslam_gmapping</Filter>
+    </ClCompile>
+    <ClCompile Include="src\openslam_gmapping\sensor\sensor_range\rangesensor.cpp">
+      <Filter>openslam_gmapping</Filter>
+    </ClCompile>
+    <ClCompile Include="src\openslam_gmapping\scanmatcher\scanmatcher.cpp">
+      <Filter>openslam_gmapping</Filter>
+    </ClCompile>
+    <ClCompile Include="src\openslam_gmapping\scanmatcher\scanmatcherprocessor.cpp">
+      <Filter>openslam_gmapping</Filter>
+    </ClCompile>
+    <ClCompile Include="src\openslam_gmapping\sensor\sensor_base\sensor.cpp">
+      <Filter>openslam_gmapping</Filter>
+    </ClCompile>
+    <ClCompile Include="src\openslam_gmapping\sensor\sensor_base\sensorreading.cpp">
+      <Filter>openslam_gmapping</Filter>
+    </ClCompile>
+    <ClCompile Include="src\openslam_gmapping\scanmatcher\smmap.cpp">
+      <Filter>openslam_gmapping</Filter>
+    </ClCompile>
+    <ClCompile Include="src\openslam_gmapping\utils\stat.cpp">
+      <Filter>openslam_gmapping</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\openslam_gmapping\scanmatcher\eig3.h">
+      <Filter>openslam_gmapping</Filter>
+    </ClInclude>
+    <ClInclude Include="src\openslam_gmapping\scanmatcher\gridlinetraversal.h">
+      <Filter>openslam_gmapping</Filter>
+    </ClInclude>
+    <ClInclude Include="src\openslam_gmapping\scanmatcher\scanmatcherprocessor.h">
+      <Filter>openslam_gmapping</Filter>
+    </ClInclude>
+    <ClInclude Include="src\openslam_gmapping\sensor\sensor_base\sensoreading.h">
+      <Filter>openslam_gmapping</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="openslam_gmapping">
+      <UniqueIdentifier>{0cd7bc34-90cc-4c56-a245-b46981382363}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="data">
+      <UniqueIdentifier>{72dde486-795a-42db-8274-74571cde099d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="config">
+      <UniqueIdentifier>{15b3bf1b-3b04-4081-b6d0-04ac2258e117}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="data\toby_20151217_071843.clf">
+      <Filter>data</Filter>
+    </None>
+  </ItemGroup>
+</Project>
