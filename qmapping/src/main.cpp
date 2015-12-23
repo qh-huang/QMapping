@@ -6,9 +6,7 @@
 #include <gmapping/gridfastslam/gridslamprocessor.h>
 #include <parameter.h>
 #include <logutils.h>
-#include "../src/openslam_gmapping/log/carmenconfiguration.h"
-#include "../src/openslam_gmapping/log/sensorstream.h"
-#include "../src/openslam_gmapping/scanmatcher/scanmatcherprocessor.h"
+#include "openslam_gmapping/scanmatcher/scanmatcherprocessor.h"
 #include <debugviz.h>
 #include <iostream>
 #include <fstream>
@@ -31,7 +29,7 @@ std::string odom_frame_;
 bool got_first_scan_;
 bool got_map_;
 
-// Parameters used by GMapping
+// Global Parameters used by GMapping
 double maxRange_;
 double minRange_;
 double maxUrange_, maxrange_;
@@ -60,7 +58,12 @@ DebugViz dbgviz_;
 
 int global_start_time;
 
+// qiao:2015.12.21: platform flags
+// FIXME: refactoring
 bool isX80 = false;
+bool isToby = false;
+bool isCarmen = false;
+bool isCSV = false;
 
 void initParamDefault()
 {
@@ -217,15 +220,14 @@ bool initMapper(double* readings, size_t num_readings, GMapping::OrientedPoint i
 			laser_angles_[i] = theta;
 			theta += std::fabs(scan_angle_increment_);
 		}
-	}
-	else { // already set
-		//*/ debug only
+	} else { // already set
+#if 0 // debug only
 		std::cout << "laser_angles_ already set: ";
 		for (unsigned int i = 0; i < num_readings; ++i) {
 			std::cout << laser_angles_[i] << " ";
 		}
 		std::cout << std::endl;
-		//*/
+#endif
 	}
 	// The laser must be called "FLASER".
 	// We pass in the absolute value of the computed angle increment, on the
@@ -233,7 +235,6 @@ bool initMapper(double* readings, size_t num_readings, GMapping::OrientedPoint i
 	// actual increment is negative, we'll swap the order of ranges before
 	// feeding each scan to GMapping.
 	GMapping::OrientedPoint gmap_pose(0, 0, 0);
-	//GMapping::OrientedPoint gmap_pose(0, 0, M_PI_2);
 	gsp_laser_ = new GMapping::RangeSensor("FLASER", gsp_laser_beam_count_, fabs(scan_angle_increment_), gmap_pose, 0.0, maxRange_);
 	GMapping::SensorMap smap;
 	smap.insert(make_pair(gsp_laser_->getName(), gsp_laser_));
@@ -312,6 +313,7 @@ struct MapMetaData
 	size_t width, height;
 	GMapping::OrientedPoint origin_pose;
 };
+
 struct OccupancyGrid
 {
 	MapMetaData info;
@@ -359,7 +361,7 @@ void updateMap(double* readings, size_t num_readings)
 		matcher.invalidateActiveArea();
 		matcher.computeActiveArea(smap, n->pose, &((*n->reading)[0]));
 		matcher.registerScan(smap, n->pose, &((*n->reading)[0]));
-		/*
+#if 0	// debug only
 		std::cout << "world(0,0) to map: " << smap.world2map(0,0).x << "," << smap.world2map(0,0).y << std::endl;
 		std::cout << "map center: " << smap.getMapSizeX() / 2 << "," << smap.getMapSizeY() / 2 << std::endl;
 		GMapping::Point world_center = smap.map2world(smap.getMapSizeX() / 2, smap.getMapSizeY() / 2);
@@ -367,7 +369,7 @@ void updateMap(double* readings, size_t num_readings)
 		std::cout << "robot point to world: " << n->pose.x << "," << n->pose.y << std::endl;
 		dbgviz_.showGridMap(smap);
 		cv::waitKey(0);
-		*/
+#endif
 	}
 
 	dbgviz_.showGridMap(smap);
@@ -379,7 +381,6 @@ void updateMap(double* readings, size_t num_readings)
 	for (size_t i = 0; i < num_readings; i++) {
 		GMapping::OrientedPoint beam_pose = best.node->pose;
 		beam_pose.theta += laser_angles_[i];
-		//dbgviz_.showIrBeam(smap, beam_pose, readings[i], beam_color);
 		dbgviz_.showIrBeam(smap, beam_pose, (*best.node->reading)[i], beam_color);
 	}
 	cv::waitKey(10);
@@ -429,6 +430,7 @@ void updateMap(double* readings, size_t num_readings)
 }
 
 // qiao@2015.08.10: copy from csharp project
+// for X80 IR sensors reading to distance
 unsigned int AD2Dis(short IRValue)
 {
 	double temp = 0;
@@ -452,32 +454,42 @@ int main()
 	GMapping::Point global_start_point(0, 0);
 	initParamDefault();
 	size_t laser_count_ = 0;
-	double enc1_prev, enc2_prev;
 	double timestamp = 0.0;
+	double enc1_prev, enc2_prev;
 
-	//*/ qiao: set log ang param file here
+	//*/ qiao@2015.12.21 public gmapping dataset session
 	//std::ifstream file("csail-oldcarmen.log");
 	//std::ifstream file("intel.clf");
-	std::ifstream file("data\\toby_20151218_113711.clf");
 	//loadParam("gmapping.cfg");
-	loadParam("config\\toby.cfg");
-	bool isCSV = false;
-	bool isCarmen = true;
+	isToby = false;
 	isX80 = false;
+	isCSV = false;
+	isCarmen = true;
+	
 
-	/*
+	//*/ qiao@2015.12.21 Toby platform session
+	std::ifstream file("data\\toby_20151221_032556.clf");
+	loadParam("config\\toby.cfg");	bool isCSV = false;
+	isCarmen = true;
+	isToby = true;
+	isX80 = false;
+	isCSV = false;
+	isCarmen = true;
+
+	/** 
+	 * ++ qiao@2015.12.21: X80 platform session
+	 * FIXME: should refactoring
 	std::ifstream file("data17_sqare300x300_4_vel100.csv");
 	//std::ifstream file("data16_sqare300x300_3_vel100.csv");
 	//std::ifstream file("data3_rec200x150.csv");
 	//std::ifstream file("data11_loop_width50_1.csv");
 	//std::ifstream file("intel.clf");
 	loadParam("gmapping_X80.cfg");
-	bool isCSV = true;
-	bool isCarmen = false;
+	isCSV = true;
+	isCarmen = false;
 	isX80 = true;
 	enc1_prev = enc2_prev = 0.0;
 	//*/
-
 
 	LogIterator loop;
 	if (isCSV) {
@@ -509,8 +521,7 @@ int main()
 
 			timestamp = std::stod((*loop)[2 + num_readings + 3 + 3 + 0]) - (double)global_start_time;
 			if (global_start_time == 0) { global_start_time = (int)timestamp; }
-		}
-		else if (isX80) {
+		} else if (isX80) {
 			// X80 log format: encoder1 encoder2 IR1 ... IR7
 			num_readings = 7;
 			readings = (double *)malloc(sizeof(double) * num_readings);
@@ -558,8 +569,7 @@ int main()
 				enc1_prev = enc1;
 				enc2_prev = enc2;
 				odom_pose = GMapping::OrientedPoint(0, 0, 0);
-			}
-			else { // got first scan
+			} else { // got first scan
 				// encoder to odometry
 				// TODO: modify ref to standard formula
 				double delta_Encoder1 = enc1 - enc1_prev;
@@ -634,11 +644,12 @@ int main()
 			//odom_pose.x = odom_pose.x - global_start_point.x;
 			//odom_pose.y = odom_pose.y - global_start_point.y;
 		}
-		// debug
+#if 0
+		// debug only
 		//std::cout << "x y theta = " << odom_pose.x << " " << odom_pose.y << " " << odom_pose.theta << " reading[91] = " << readings[91] << std::endl;
 		//system("pause");
 		//continue;
-
+#endif
 		// to simulate IR, reduce beams number of laser measurement
 		size_t div = 1;// 36;
 		size_t ir_num_readings = num_readings / div;
@@ -663,7 +674,6 @@ int main()
 			std::cout << "new best pose: " << mpose.x << " " << mpose.y << " " << mpose.theta << std::endl;
 			std::cout << "odom pose: " << odom_pose.x << " " << odom_pose.y << " " << odom_pose.theta << std::endl;
 			std::cout << "correction: " << mpose.x - odom_pose.x << " " << mpose.y - odom_pose.y << " " << mpose.theta - odom_pose.theta << std::endl;
-			//system("pause");
 			if (!got_map_ || true)	{ // always update
 				updateMap(ir_readings, ir_num_readings);
 				std::cout << "Updated the map" << std::endl;
