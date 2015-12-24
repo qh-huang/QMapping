@@ -2,7 +2,7 @@
 #define DEBUGVIZ_H
 
 #define _USE_MATH_DEFINES
-#include <opencv2/opencv.hpp>
+#include "opencv2/opencv.hpp"
 #include <cmath>
 #include <gmapping/scanmatcher/smmap.h>
 
