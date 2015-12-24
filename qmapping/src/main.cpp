@@ -17,6 +17,8 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 
+#include "platform.h"
+
 // The angles in the laser, going from -x to x (adjustment is made to get the laser between
 // symmetrical bounds as that's what gmapping expects)
 std::vector<double> laser_angles_;
@@ -51,19 +53,14 @@ double delta_;
 double occ_thresh_;
 double llsamplerange_, llsamplestep_, lasamplerange_, lasamplestep_;
 unsigned long int seed_;
-
 double scan_angle_increment_;
 
 DebugViz dbgviz_;
 
-int global_start_time;
+double global_start_time;
 
 // qiao:2015.12.21: platform flags
 // FIXME: refactoring
-bool isX80 = false;
-bool isToby = false;
-bool isCarmen = false;
-bool isCSV = false;
 
 void initParamDefault()
 {
@@ -277,6 +274,7 @@ bool addScan(double* readings, size_t num_readings, GMapping::OrientedPoint& gma
 	}
 
 	GMapping::RangeReading reading(num_readings, ranges_double, gsp_laser_, timestamp);
+	/* FIXME: refactor this
 	// add offset for IRs (X80)
 	if (isX80) {
 		const double OFFSET_1 = 0.18;
@@ -294,7 +292,7 @@ bool addScan(double* readings, size_t num_readings, GMapping::OrientedPoint& gma
 		reading[5] += OFFSET_6;
 		reading[6] += OFFSET_7;
 	}
-
+	*/
 	// ...but it deep copies them in RangeReading constructor, so we don't
 	// need to keep our array around.
 	delete[] ranges_double;
@@ -353,11 +351,13 @@ void updateMap(double* readings, size_t num_readings)
 	std::cout << "Trajectory tree:" << std::endl;
 	for (GMapping::GridSlamProcessor::TNode* n = best.node; n; n = n->parent) {
 		//ROS_DEBUG("  %.3f %.3f %.3f", n->pose.x, n->pose.y, n->pose.theta);
+		//
 		std::cout << n->pose.x << " " << n->pose.y << " " << n->pose.theta << std::endl;
 		if (!n->reading) {
 			std::cout << "Reading is NULL" << std::endl;
 			continue;
 		}
+		//*/
 		matcher.invalidateActiveArea();
 		matcher.computeActiveArea(smap, n->pose, &((*n->reading)[0]));
 		matcher.registerScan(smap, n->pose, &((*n->reading)[0]));
@@ -373,16 +373,15 @@ void updateMap(double* readings, size_t num_readings)
 	}
 
 	dbgviz_.showGridMap(smap);
-
-	int robot_color[3] = { 0, 0, 255 };
-	dbgviz_.showRobotPose(smap, best.node->pose, robot_color);
-
 	int beam_color[3] = { 10, 200, 28 };
 	for (size_t i = 0; i < num_readings; i++) {
 		GMapping::OrientedPoint beam_pose = best.node->pose;
 		beam_pose.theta += laser_angles_[i];
-		dbgviz_.showIrBeam(smap, beam_pose, (*best.node->reading)[i], beam_color);
+		dbgviz_.showLaserBeam(smap, beam_pose, (*best.node->reading)[i], beam_color);
 	}
+	int robot_color[3] = { 0, 0, 255 };
+	dbgviz_.showRobotPose(smap, best.node->pose, robot_color);
+
 	cv::waitKey(10);
 	// the map may have expanded, so resize ros message as well
 	if (map_.info.width != (unsigned int)smap.getMapSizeX() || map_.info.height != (unsigned int)smap.getMapSizeY()) {
@@ -429,6 +428,7 @@ void updateMap(double* readings, size_t num_readings)
 	got_map_ = true;
 }
 
+/* qiao@2015.12.24: FIXME: refactor - should belong to platform class
 // qiao@2015.08.10: copy from csharp project
 // for X80 IR sensors reading to distance
 unsigned int AD2Dis(short IRValue)
@@ -447,7 +447,7 @@ unsigned int AD2Dis(short IRValue)
 		IRAD2Distance = temp;
 	return IRAD2Distance;
 }
-
+*/
 int main()
 {
 	global_start_time = 0;
@@ -461,20 +461,14 @@ int main()
 	//std::ifstream file("csail-oldcarmen.log");
 	//std::ifstream file("intel.clf");
 	//loadParam("gmapping.cfg");
-	isToby = false;
-	isX80 = false;
-	isCSV = false;
-	isCarmen = true;
 	
 
 	//*/ qiao@2015.12.21 Toby platform session
-	std::ifstream file("data\\toby_20151221_032556.clf");
-	loadParam("config\\toby.cfg");	bool isCSV = false;
-	isCarmen = true;
-	isToby = true;
-	isX80 = false;
-	isCSV = false;
-	isCarmen = true;
+	Platform* platform = new Platform("toby", "config\\toby.cfg", "data\\toby_20151221_032556.clf", CARMEN_LOG_FILE);
+	loadParam("config\\toby.cfg");	
+
+	//Platform* platform = new Platform("gmapping", "config\\gmapping.cfg", "data\\intel.clf", CARMEN_LOG_FILE);
+	//loadParam("config\\gmapping.cfg");
 
 	/** 
 	 * ++ qiao@2015.12.21: X80 platform session
@@ -490,7 +484,7 @@ int main()
 	isX80 = true;
 	enc1_prev = enc2_prev = 0.0;
 	//*/
-
+	/*
 	LogIterator loop;
 	if (isCSV) {
 		loop = LogIterator(file, ',');
@@ -498,117 +492,102 @@ int main()
 	else {
 		loop = LogIterator(file, ' ');
 	}
-
-	double* readings = 0;
-	size_t num_readings;
+	*/
 	GMapping::OrientedPoint odom_pose;
-	for (; loop != LogIterator(); ++loop) {
-		// in old-format carmen-log, FLASER should followed by ODOM
-		if (isCarmen && (*loop)[0] == "FLASER") {
-			// # FLASER num_readings [range_readings] x y theta odom_x odom_y odom_theta
-			num_readings = (size_t)std::stoi((*loop)[1]);
-			// fill laser reading
-			readings = (double *)malloc(sizeof(double) * num_readings);
-			memset(readings, 0, num_readings);
-			for (size_t i = 0; i < num_readings; i++) {
-				readings[i] = std::stod((*loop)[i + 2]);
-				// std::cout << readings[i] << " ";
+	// should be like this:
+	// while(robot.nextReading() == true) {...}
+	vector<double> reading;
+	Odom odom;
+	while (platform->getNextReading(reading, odom, timestamp)) {
+		odom_pose.x = odom.x;
+		odom_pose.y = odom.y;
+		odom_pose.theta = odom.th;
+		timestamp -= (float)global_start_time;
+		if (global_start_time == 0) { global_start_time = timestamp; }
+/*
+	else if (isX80) {
+		// X80 log format: encoder1 encoder2 IR1 ... IR7
+		num_readings = 7;
+		readings = (double *)malloc(sizeof(double) * num_readings);
+		memset(readings, 0, num_readings);
+		readings[0] = (double)AD2Dis(std::stod((*loop)[2])) / 100;
+		readings[1] = (double)AD2Dis(std::stod((*loop)[3])) / 100;
+		readings[2] = (double)AD2Dis(std::stod((*loop)[4])) / 100;
+		readings[3] = (double)AD2Dis(std::stod((*loop)[5])) / 100;
+		readings[4] = (double)AD2Dis(std::stod((*loop)[6])) / 100;
+		readings[5] = (double)AD2Dis(std::stod((*loop)[7])) / 100;
+		readings[6] = (double)AD2Dis(std::stod((*loop)[8])) / 100;
+		readings[3] = 0.00001;// too noisy, ignore it
+		// debug
+		std::cout << "readings = ";
+		for (size_t i = 0; i < num_readings; i++) {
+			std::cout << readings[i] << " ";
+		}
+		std::cout << std::endl;
+		// according to IR position, IR right, right-front, right-head, left-head, left-front, left
+		// is IR 5,4,3,2,1,7
+		const double ANGLE_2 = 0.4729383367949;
+		const double ANGLE_3 = -ANGLE_2;
+		const double ANGLE_1 = 0.71347261;
+		const double ANGLE_4 = -ANGLE_1;
+		const double ANGLE_5 = -M_PI_2;	// 0.0;	// rad, about 180-51.44 deg
+		const double ANGLE_7 = M_PI_2;
+		const double ANGLE_6 = M_PI;
+
+		laser_angles_.resize(num_readings);
+		laser_angles_[0] = ANGLE_1;
+		laser_angles_[1] = ANGLE_2;
+		laser_angles_[2] = ANGLE_3;
+		laser_angles_[3] = ANGLE_4;
+		laser_angles_[4] = ANGLE_5;
+		laser_angles_[5] = ANGLE_6;
+		laser_angles_[6] = ANGLE_7;
+		//const double RES = 0.05; // angle resolution
+		// encoder
+		double enc1, enc2;
+		enc1 = std::stod((*loop)[0]);
+		enc2 = std::stod((*loop)[1]);
+		if (!got_first_scan_) { // no previous encoder data
+			enc1_prev = enc1;
+			enc2_prev = enc2;
+			odom_pose = GMapping::OrientedPoint(0, 0, 0);
+		} else { // got first scan
+			// encoder to odometry
+			// TODO: modify ref to standard formula
+			double delta_Encoder1 = enc1 - enc1_prev;
+			double delta_Encoder2 = enc2 - enc2_prev;
+			if (fabs(delta_Encoder1) < 5 && fabs(delta_Encoder2) < 5) {
+				continue;
 			}
-			// std::cout << std::endl;
-			odom_pose.x = std::stod((*loop)[2 + num_readings + 3 + 0]); // odom_x
-			odom_pose.y = std::stod((*loop)[2 + num_readings + 3 + 1]); // odom_y
-			odom_pose.theta = std::stod((*loop)[2 + num_readings + 3 + 2]); // odom_theta
-
-			timestamp = std::stod((*loop)[2 + num_readings + 3 + 3 + 0]) - (double)global_start_time;
-			if (global_start_time == 0) { global_start_time = (int)timestamp; }
-		} else if (isX80) {
-			// X80 log format: encoder1 encoder2 IR1 ... IR7
-			num_readings = 7;
-			readings = (double *)malloc(sizeof(double) * num_readings);
-			memset(readings, 0, num_readings);
-			readings[0] = (double)AD2Dis(std::stod((*loop)[2])) / 100;
-			readings[1] = (double)AD2Dis(std::stod((*loop)[3])) / 100;
-			readings[2] = (double)AD2Dis(std::stod((*loop)[4])) / 100;
-			readings[3] = (double)AD2Dis(std::stod((*loop)[5])) / 100;
-			readings[4] = (double)AD2Dis(std::stod((*loop)[6])) / 100;
-			readings[5] = (double)AD2Dis(std::stod((*loop)[7])) / 100;
-			readings[6] = (double)AD2Dis(std::stod((*loop)[8])) / 100;
-
-			readings[3] = 0.00001;// too noisy, ignore it
-			// debug
-			std::cout << "readings = ";
-			for (size_t i = 0; i < num_readings; i++) {
-				std::cout << readings[i] << " ";
+			// check if encoder just over the maximum (default 32767)
+			const int cFULL_COUNT = 32767;
+			const double THRESHOLD = (double)cFULL_COUNT * 0.8;
+			if (delta_Encoder1 > 0 && delta_Encoder1 > THRESHOLD) { // decreasing and just cross 0->cFULL_COUNT
+				delta_Encoder1 = delta_Encoder1 - (double)cFULL_COUNT;
 			}
-			std::cout << std::endl;
-			// according to IR position, IR right, right-front, right-head, left-head, left-front, left
-			// is IR 5,4,3,2,1,7
-			const double ANGLE_2 = 0.4729383367949;
-			const double ANGLE_3 = -ANGLE_2;
-			const double ANGLE_1 = 0.71347261;
-			const double ANGLE_4 = -ANGLE_1;
-			const double ANGLE_5 = -M_PI_2;	// 0.0;	// rad, about 180-51.44 deg
-			const double ANGLE_7 = M_PI_2;
-			const double ANGLE_6 = M_PI;
-
-			laser_angles_.resize(num_readings);
-			laser_angles_[0] = ANGLE_1;
-			laser_angles_[1] = ANGLE_2;
-			laser_angles_[2] = ANGLE_3;
-			laser_angles_[3] = ANGLE_4;
-			laser_angles_[4] = ANGLE_5;
-			laser_angles_[5] = ANGLE_6;
-			laser_angles_[6] = ANGLE_7;
-			//const double RES = 0.05; // angle resolution
-
-			// encoder
-			double enc1, enc2;
-			enc1 = std::stod((*loop)[0]);
-			enc2 = std::stod((*loop)[1]);
-			if (!got_first_scan_) { // no previous encoder data
-				enc1_prev = enc1;
-				enc2_prev = enc2;
-				odom_pose = GMapping::OrientedPoint(0, 0, 0);
-			} else { // got first scan
-				// encoder to odometry
-				// TODO: modify ref to standard formula
-				double delta_Encoder1 = enc1 - enc1_prev;
-				double delta_Encoder2 = enc2 - enc2_prev;
-				if (fabs(delta_Encoder1) < 5 && fabs(delta_Encoder2) < 5) {
-					continue;
+			if (delta_Encoder1 < 0 && delta_Encoder1 < -THRESHOLD) { // increasing and just cross cFULL_COUNT->0
+				delta_Encoder1 = delta_Encoder1 + (double)cFULL_COUNT;
+			}
+			if (delta_Encoder2 > 0 && delta_Encoder2 > THRESHOLD) { // decreasing and just cross 0->cFULL_COUNT
+				delta_Encoder2 = delta_Encoder2 - (double)cFULL_COUNT;
+			}
+			if (delta_Encoder2 < 0 && delta_Encoder2 < -THRESHOLD) { // increasing and just cross cFULL_COUNT->0
+				delta_Encoder2 = delta_Encoder2 + (double)cFULL_COUNT;
+			}
+			// for rotation, just calculate delta angle and apply
+			const double FULL_COUNT_1 = 2400;
+			const double FULL_COUNT_2 = 2400;
+			if (delta_Encoder1 * delta_Encoder2 >= 0) {
+				double dAngleD_by_Enc1 = 360.0 * delta_Encoder1 / FULL_COUNT_1;
+				double dAngleD_by_Enc2 = 360.0 * delta_Encoder2 / FULL_COUNT_2;
+				double dAngle_by_Enc1 = dAngleD_by_Enc1 * M_PI / 180.0;
+				double dAngle_by_Enc2 = dAngleD_by_Enc2 * M_PI / 180.0;
+				odom_pose.theta += (dAngle_by_Enc1 + dAngle_by_Enc2);
+				if (odom_pose.theta > 2 * M_PI) {
+					odom_pose.theta -= 2 * M_PI;
 				}
-
-				// check if encoder just over the maximum (default 32767)
-				const int cFULL_COUNT = 32767;
-				const double THRESHOLD = (double)cFULL_COUNT * 0.8;
-				if (delta_Encoder1 > 0 && delta_Encoder1 > THRESHOLD) { // decreasing and just cross 0->cFULL_COUNT
-					delta_Encoder1 = delta_Encoder1 - (double)cFULL_COUNT;
-				}
-				if (delta_Encoder1 < 0 && delta_Encoder1 < -THRESHOLD) { // increasing and just cross cFULL_COUNT->0
-					delta_Encoder1 = delta_Encoder1 + (double)cFULL_COUNT;
-				}
-				if (delta_Encoder2 > 0 && delta_Encoder2 > THRESHOLD) { // decreasing and just cross 0->cFULL_COUNT
-					delta_Encoder2 = delta_Encoder2 - (double)cFULL_COUNT;
-				}
-				if (delta_Encoder2 < 0 && delta_Encoder2 < -THRESHOLD) { // increasing and just cross cFULL_COUNT->0
-					delta_Encoder2 = delta_Encoder2 + (double)cFULL_COUNT;
-				}
-
-				// for rotation, just calculate delta angle and apply
-				const double FULL_COUNT_1 = 2400;
-				const double FULL_COUNT_2 = 2400;
-				if (delta_Encoder1 * delta_Encoder2 >= 0) {
-					double dAngleD_by_Enc1 = 360.0 * delta_Encoder1 / FULL_COUNT_1;
-					double dAngleD_by_Enc2 = 360.0 * delta_Encoder2 / FULL_COUNT_2;
-					double dAngle_by_Enc1 = dAngleD_by_Enc1 * M_PI / 180.0;
-					double dAngle_by_Enc2 = dAngleD_by_Enc2 * M_PI / 180.0;
-					odom_pose.theta += (dAngle_by_Enc1 + dAngle_by_Enc2);
-					if (odom_pose.theta > 2 * M_PI) {
-						odom_pose.theta -= 2 * M_PI;
-					}
-					if (odom_pose.theta < -2 * M_PI) {
-						odom_pose.theta += 2 * M_PI;
-					}
+				if (odom_pose.theta < -2 * M_PI) {
+					odom_pose.theta += 2 * M_PI;					}
 				}
 				else {
 					// for transition, need to find distance and delta angle
@@ -630,10 +609,10 @@ int main()
 				enc1_prev = enc1;
 				enc2_prev = enc2;
 			} // got first scan
-		}
-		else {
-			continue;
-		} // (*loop)[0] == "XXX"
+		}*/// if(isX80)
+		//else {
+			//continue;
+		//} // (*loop)[0] == "XXX"
 
 		// to avoid too large offset
 		if (GMapping::euclidianDist(GMapping::Point(0, 0), global_start_point) < 0.000001) {
@@ -649,7 +628,6 @@ int main()
 		//std::cout << "x y theta = " << odom_pose.x << " " << odom_pose.y << " " << odom_pose.theta << " reading[91] = " << readings[91] << std::endl;
 		//system("pause");
 		//continue;
-#endif
 		// to simulate IR, reduce beams number of laser measurement
 		size_t div = 1;// 36;
 		size_t ir_num_readings = num_readings / div;
@@ -659,15 +637,20 @@ int main()
 		for (size_t i = 0; i < ir_num_readings; i++) {
 			ir_readings[i] = readings[i * div];
 		}
-
+#endif
+		scan_angle_increment_ = M_PI / (double)reading.size();
 		// We can't initialize the mapper until we've got the first scan
+		double* readings = (double*)malloc(sizeof(double)*reading.size());
+		for (size_t i = 0; i < reading.size(); i++) {
+			readings[i] = reading[i];
+		}
 		if (!got_first_scan_) {
-			if (!initMapper(ir_readings, ir_num_readings, odom_pose))
+			if (!initMapper(readings, reading.size(), odom_pose))
 				continue;
 			got_first_scan_ = true;
 		}
-		if (isX80) { timestamp += 0.01; }
-		if (addScan(ir_readings, ir_num_readings, odom_pose, timestamp)) {
+		//if (isX80) { timestamp += 0.01; }
+		if (addScan(readings, reading.size(), odom_pose, timestamp)) {
 			std::cout << "scan processed" << std::endl;
 
 			GMapping::OrientedPoint mpose = gsp_->getParticles()[gsp_->getBestParticleIndex()].pose;
@@ -675,13 +658,13 @@ int main()
 			std::cout << "odom pose: " << odom_pose.x << " " << odom_pose.y << " " << odom_pose.theta << std::endl;
 			std::cout << "correction: " << mpose.x - odom_pose.x << " " << mpose.y - odom_pose.y << " " << mpose.theta - odom_pose.theta << std::endl;
 			if (!got_map_ || true)	{ // always update
-				updateMap(ir_readings, ir_num_readings);
+				updateMap(readings, reading.size());
 				std::cout << "Updated the map" << std::endl;
 			}
 		}
 		else { std::cout << "cannot process scan" << std::endl; }
 		free(readings);
-	} // for loop++
+	}
 	// same logic as ROS-GMapping, refer to SlamGMapping::laserCallback
 
 	system("pause");
