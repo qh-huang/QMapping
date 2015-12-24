@@ -148,7 +148,6 @@ void Map<Cell,Storage,isClass>::resize(double xmin, double ymin, double xmax, do
 	m_mapSizeY=m_storage.getYSize()<<m_storage.getPatchSize();
 	m_worldSizeX=xmax-xmin;
 	m_worldSizeY=ymax-ymin;
-	//m_center=Point(0.5*m_worldSizeX, 0.5*m_worldSizeY); // qiao
 	m_sizeX2-=pxmin*(1<<m_storage.getPatchMagnitude());
 	m_sizeY2-=pymin*(1<<m_storage.getPatchMagnitude());
 }

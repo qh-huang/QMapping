@@ -133,8 +133,7 @@ static void tred2(double V[n][n], double d[n], double e[n]) {
   e[0] = 0.0;
 } 
 
-
-/* Symmetric tridiagonal QL algorithm. */
+// Symmetric tridiagonal QL algorithm.
 
 static void tql2(double V[n][n], double d[n], double e[n]) {
 

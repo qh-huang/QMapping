@@ -100,6 +100,7 @@
     <ClCompile Include="src\openslam_gmapping\utils\stat.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\platform.h" />
     <ClInclude Include="src\openslam_gmapping\scanmatcher\eig3.h" />
     <ClInclude Include="src\openslam_gmapping\scanmatcher\gridlinetraversal.h" />
     <ClInclude Include="src\openslam_gmapping\scanmatcher\scanmatcherprocessor.h" />

@@ -13,7 +13,7 @@ struct DebugViz
 
 	inline void showGridMap(GMapping::ScanMatcherMap smmap);
 	inline void showRobotPose(GMapping::ScanMatcherMap smmap, GMapping::OrientedPoint pose, int* colorRGB);
-	inline void showIrBeam(GMapping::ScanMatcherMap smmap, GMapping::OrientedPoint pose, double measure, int* colorRGB);
+	inline void showLaserBeam(GMapping::ScanMatcherMap smmap, GMapping::OrientedPoint pose, double measure, int* colorRGB);
 
 	inline void setGridResolution(double resolution) { _grid_resolution = resolution; }
 
@@ -24,7 +24,7 @@ struct DebugViz
 	inline void showGridMap(size_t size_x, size_t size_y, double ** gridmap) { _sizeX = size_x; _sizeY = size_y; showGridMap(gridmap); }
 
 	inline void showRobotPose(double* pose2D_XYA, int* colorRGB);
-	inline void showIrBeam(double* pRobotXYA, double* pIrXYA, double length, int* colorRGB);
+	inline void showLaserBeam(double* pRobotXYA, double* pIrXYA, double length, int* colorRGB);
 
 	inline void setWorldCenter(double x, double y){ _world_center_x = x; _world_center_y = y; }
 
@@ -122,7 +122,7 @@ inline void DebugViz::showRobotPose(GMapping::ScanMatcherMap smmap, GMapping::Or
 	cv::imshow("DebugViz", _matMap);
 }
 
-inline void DebugViz::showIrBeam(GMapping::ScanMatcherMap smmap, GMapping::OrientedPoint pose, double measure, int* colorRGB)
+inline void DebugViz::showLaserBeam(GMapping::ScanMatcherMap smmap, GMapping::OrientedPoint pose, double measure, int* colorRGB)
 {
 	double pose2D_XYA[3];
 	pose2D_XYA[0] = smmap.world2map(pose).x;
@@ -214,7 +214,7 @@ inline void DebugViz::showRobotPose(double* pose2D_XYA, int* colorRGB)
  * @param IrXYA IR pose to robot frame
  * @param length IR measurement value
  */
-inline void DebugViz::showIrBeam(double* pRobotXYA, double* pIrXYA, double length, int* colorRGB){
+inline void DebugViz::showLaserBeam(double* pRobotXYA, double* pIrXYA, double length, int* colorRGB){
 	cv::Point2d pRobot(pRobotXYA[0],pRobotXYA[1]);
 	cv::Point2d __pIRa, __pIRb; // IR start, end point
 	cv::Point2d _pIRa, _pIRb; // IR start, end point 

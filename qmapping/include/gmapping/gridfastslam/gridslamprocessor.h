@@ -177,7 +177,7 @@ namespace GMapping {
     virtual void onOdometryUpdate();
     virtual void onResampleUpdate();
     virtual void onScanmatchUpdate();
-
+	
     //accessor methods
     /**the maxrange of the laser to consider */
     MEMBER_PARAM_SET_GET(m_matcher, double, laserMaxRange, protected, public, public);
@@ -226,6 +226,7 @@ namespace GMapping {
 
     /**pose of the laser wrt the robot [scanmatcher]*/
     MEMBER_PARAM_SET_GET(m_matcher, OrientedPoint, laserPose, protected, public, public);
+
 
     /**odometry error in translation as a function of translation (rho/rho) [motionmodel]*/
     STRUCT_PARAM_SET_GET(m_motionModel, double, srr, protected, public, public);
@@ -310,7 +311,7 @@ namespace GMapping {
   private:
     
     /**scanmatches all the particles*/
-    void scanMatch(const double *plainReading);
+    inline void scanMatch(const double *plainReading);
     /**normalizes the particle weights*/
     inline void normalize();
     

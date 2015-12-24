@@ -58,6 +58,7 @@
     <ClInclude Include="src\openslam_gmapping\sensor\sensor_base\sensoreading.h">
       <Filter>openslam_gmapping</Filter>
     </ClInclude>
+    <ClInclude Include="include\platform.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="openslam_gmapping">

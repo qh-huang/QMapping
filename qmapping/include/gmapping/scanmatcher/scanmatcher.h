@@ -164,40 +164,26 @@ inline double ScanMatcher::score(const ScanMatcherMap& map, const OrientedPoint&
 		IntPoint ipfree=map.world2map(pfree);
 		bool found=false;
 		Point bestMu(0.,0.);
-		// qiao: considering fullness
-		double bestMuScore = 0.0;
-		// end considering fullness
 		for (int xx=-m_kernelSize; xx<=m_kernelSize; xx++)
 		for (int yy=-m_kernelSize; yy<=m_kernelSize; yy++){
 			IntPoint pr=iphit+IntPoint(xx,yy);
 			IntPoint pf=pr+ipfree;
-			const PointAccumulator& cell=map.cell(pr);
-			const PointAccumulator& fcell=map.cell(pf);
-			if (((double)cell )> m_fullnessThreshold && ((double)fcell )<m_fullnessThreshold){
-				Point mu=phit-cell.mean();
-				if (!found){
-					bestMu=mu;
-					found=true;
-					bestMuScore = (double)cell;
+			//AccessibilityState s=map.storage().cellState(pr);
+			//if (s&Inside && s&Allocated){
+				const PointAccumulator& cell=map.cell(pr);
+				const PointAccumulator& fcell=map.cell(pf);
+				if (((double)cell )> m_fullnessThreshold && ((double)fcell )<m_fullnessThreshold){
+					Point mu=phit-cell.mean();
+					if (!found){
+						bestMu=mu;
+						found=true;
+					}else
+						bestMu=(mu*mu)<(bestMu*bestMu)?mu:bestMu;
 				}
-				else{
-					bestMu = (mu*mu) < (bestMu*bestMu) ? mu : bestMu;
-					bestMuScore = (mu*mu) < (bestMu*bestMu) ? (double)cell : bestMuScore;
-				}
-			}
+			//}
 		}
-		if (found){
-			// s+=exp(-1.* bestMu * bestMu/m_gaussianSigma);
-			s += exp(-1.* bestMu * bestMu * bestMuScore/ m_gaussianSigma);
-		}
-		else{
-			// qiao: consider fullness
-			const PointAccumulator& cell = map.cell(iphit);
-			double fullness = (double)cell;
-			if ( fullness > 0.0) { // hit free cell, reduce score
-				s -= 0.9;
-			}
-		}
+		if (found)
+			s+=exp(-1./m_gaussianSigma*bestMu*bestMu);
 	}
 	return s;
 }

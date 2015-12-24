@@ -24,7 +24,7 @@ ScanMatcher::ScanMatcher(): m_laserPose(0,0,0){
 	m_llsamplestep=0.01;
 	m_lasamplerange=0.005;
 	m_lasamplestep=0.005;
-	m_enlargeStep = 2.; // 10.;
+	m_enlargeStep=10.;
 	m_fullnessThreshold=0.1;
 	m_angularOdometryReliability=0.;
 	m_linearOdometryReliability=0.;
@@ -149,14 +149,14 @@ void ScanMatcher::computeActiveArea(ScanMatcherMap& map, const OrientedPoint& p,
 	if ( !map.isInside(min)	|| !map.isInside(max)){
 		Point lmin(map.map2world(0,0));
 		Point lmax(map.map2world(map.getMapSizeX()-1,map.getMapSizeY()-1));
-		//std::cout << "CURRENT MAP " << lmin.x << " " << lmin.y << " " << lmax.x << " " << lmax.y << endl;
-		//std::cout << "BOUNDARY OVERRIDE " << min.x << " " << min.y << " " << max.x << " " << max.y << endl;
+		//cerr << "CURRENT MAP " << lmin.x << " " << lmin.y << " " << lmax.x << " " << lmax.y << endl;
+		//cerr << "BOUNDARY OVERRIDE " << min.x << " " << min.y << " " << max.x << " " << max.y << endl;
 		min.x=( min.x >= lmin.x )? lmin.x: min.x-m_enlargeStep;
 		max.x=( max.x <= lmax.x )? lmax.x: max.x+m_enlargeStep;
 		min.y=( min.y >= lmin.y )? lmin.y: min.y-m_enlargeStep;
 		max.y=( max.y <= lmax.y )? lmax.y: max.y+m_enlargeStep;
 		map.resize(min.x, min.y, max.x, max.y);
-		//std::cout << "RESIZE " << min.x << " " << min.y << " " << max.x << " " << max.y << endl;
+		//cerr << "RESIZE " << min.x << " " << min.y << " " << max.x << " " << max.y << endl;
 	}
 	
 	HierarchicalArray2D<PointAccumulator>::PointSet activeArea;
@@ -215,9 +215,7 @@ void ScanMatcher::computeActiveArea(ScanMatcherMap& map, const OrientedPoint& p,
 double ScanMatcher::registerScan(ScanMatcherMap& map, const OrientedPoint& p, const double* readings){
 	if (!m_activeAreaComputed)
 		computeActiveArea(map, p, readings);
-	// debug
-	//std::cout << "registerScan: p = " << p.x << " " << p.y << " " << p.theta << std::endl;
-
+		
 	//this operation replicates the cells that will be changed in the registration operation
 	map.storage().allocActiveArea();
 	
@@ -244,20 +242,17 @@ double ScanMatcher::registerScan(ScanMatcherMap& map, const OrientedPoint& p, co
 			line.points=m_linePoints;
 			GridLineTraversal::gridLine(p0, p1, &line);
 			for (int i=0; i<line.num_points-1; i++){
-				PointAccumulator& cell = map.cell(line.points[i]);
+				PointAccumulator& cell=map.cell(line.points[i]);
 				double e=-cell.entropy();
 				cell.update(false, Point(0,0));
 				e+=cell.entropy();
 				esum+=e;
 			}
-			if (d<m_usableRange){ // occupied
+			if (d<m_usableRange){
 				double e=-map.cell(p1).entropy();
 				map.cell(p1).update(true, phit);
 				e+=map.cell(p1).entropy();
 				esum+=e;
-
-				//debug
-				//std::cout << "registerScan: phit(x,y) = (" << phit.x << "," << phit.y << ")" << std::endl;
 			}
 		} else {
 			if (*r>m_laserMaxRange||*r>m_usableRange||*r==0.0||isnan(*r)) continue;
